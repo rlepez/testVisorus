@@ -48,7 +48,10 @@ class ProductoService {
     def findByDescripcion(String descripcion){
         return Producto.findByDescripcion(descripcion)
     }
-    def findByLikeDescripcion(String descripcion){
+    def findAllByDescripcionLike(String descripcion){
         return Producto.findAllByDescripcionLike(descripcion)
+    }
+    List<Producto> list(){
+        return Producto.list();
     }
 }

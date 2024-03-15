@@ -1,16 +1,50 @@
 package testvisorus
 
 import grails.converters.JSON
-
+import grails.transaction.Transactional
+import security.Usuario
+import security.UsuarioRol
+import org.springframework.security.crypto.bcrypt.BCrypt
 
 class CategoriaController {
     def categoriaService
 
     def index() {}
 
+    //se hace un check de usuario y contraseña
+    //regresa usuarioRol
+    def log(){
+        try {
+            if(!params.username || !params.password)
+                throw new Exception("El usuario y contraseña son obligatorios")
+            Usuario usuario=Usuario.findByUsername(params.username as String)
+            if(!usuario)
+                throw new Exception("El usuario no existe")
+            //Se utiliza BCrypt para comparar la contraseña cifrada almacenada con la insertada en elm post
+            def passValida=BCrypt.checkpw(params.password,usuario.password)
+            if(!passValida)
+                throw new Exception("La contraseña es incorrecta")
+
+            def usuarioRol=UsuarioRol.findByUser(usuario)
+            def data=[message: 'Existoso',usuarioRol:usuarioRol]
+            return data
+        }
+        catch (ex){
+            def data=[message: "error al loguearse "+ ex.getMessage(),usuarioRol:null]
+            return data
+        }
+    }
+
     //Se crea una nueva categoria
     def save(){
+        def datLog=log() //check usuario y contraseña
         try {
+            if (!datLog.usuarioRol) // si el usuarioRol es nulo regresa error
+                throw new Exception(datLog.message)
+
+            if(datLog.usuarioRol.role.authority!='ROLE_ADMIN') //Si el rol es diferente a Admin no permite guardar
+                throw new Exception('Usuario de solo lectura')
+
             if(!params.codigo || !params.descripcion)
                 throw new Exception('El código y la descripción son datos obligatorios')
 
@@ -30,7 +64,14 @@ class CategoriaController {
     }
 
     def update(){
+        def datLog=log() //check usuario y contraseña
         try {
+            if (!datLog.usuarioRol) //Si el usuarioRol es nulo regresa error
+                throw new Exception(datLog.message)
+
+            if(datLog.usuarioRol.role.authority!='ROLE_ADMIN')//Si es usuario invitado no puede actualizar
+                throw new Exception('Usuario de solo lectura')
+
             Categoria categoriaInstance=params.id ? categoriaService.get(params.id as Long) : null
             if(!categoriaInstance)
                 throw new Exception('La categoria que intentas actualizr no existe')
@@ -50,7 +91,14 @@ class CategoriaController {
     }
 
     def delete(){
+        def datLog=log()
         try{
+            if (!datLog.usuarioRol)
+                throw new Exception(datLog.message)
+
+            if(datLog.usuarioRol.role.authority!='ROLE_ADMIN')
+                throw new Exception('Usuario de solo lectura')
+
             Categoria categoriaInstance=params.id ? categoriaService.get(params.id as Long) : null
             if(!categoriaInstance)
                 throw new Exception('La categoria que intentas eliminar no existe')
@@ -66,7 +114,11 @@ class CategoriaController {
     }
 
     def get(){
+        def datLog=log()
         try {
+            if (!datLog.usuarioRol)
+                throw new Exception(datLog.message)
+
             Map datosCat
             Categoria categoriaInstance=params.id ? categoriaService.get(params.id as Long) : null
             if(!categoriaInstance) {
@@ -87,7 +139,11 @@ class CategoriaController {
 
     }
     def list(){
+        def datLog=log()
         try {
+            if (!datLog.usuarioRol)
+                throw new Exception(datLog.message)
+
             List<Categoria> categoriaList=categoriaService.list()
             def data=[list:categoriaList,success: true]
             render data as JSON
@@ -99,7 +155,12 @@ class CategoriaController {
     }
 
     def findByCodigo(){
+        def datLog=log()
+
         try {
+            if (!datLog.usuarioRol)
+                throw new Exception(datLog.message)
+
             Map datosCat
             if (!params.codigo)
                 throw new Exception('El codigo es obligatorio para la busqueda')
@@ -122,7 +183,11 @@ class CategoriaController {
 
     }
     def findByDescripcion(){
+        def datLog=log()
         try {
+            if (!datLog.usuarioRol)
+                throw new Exception(datLog.message)
+
             Map datosCat
             if (!params.descripcion)
                 throw new Exception('La descripción es obligatoria para la busqueda')
@@ -145,12 +210,16 @@ class CategoriaController {
 
     }
     def findAllByDescripcionLike(){
+        def datLog=log()
         try {
+            if (!datLog.usuarioRol)
+                throw new Exception(datLog.message)
+
             def categoriasList=[]
             if (!params.descripcion)
                 throw new Exception('La descripción es obligatoria para la busqueda')
 
-            def categorias=categoriaService.findAllByDescripcionLike(params.descripcion)
+            def categorias=categoriaService.findAllByDescripcionLike('%'+params.descripcion+'%')
                 categorias?.each{
                     categoriasList<<[
                             id:it?.id,codigo:it?.codigo,descripcion:it?.descripcion,activo:it?.activo
@@ -166,7 +235,7 @@ class CategoriaController {
 
         }
         catch(ex){
-            def data = [message: "Ha ocurrido un error" + ex.getMessage(), type: "Error", success: false]
+            def data = [message: "Ha ocurrido un error " + ex.getMessage(), type: "Error", success: false]
             render data as JSON
         }
 

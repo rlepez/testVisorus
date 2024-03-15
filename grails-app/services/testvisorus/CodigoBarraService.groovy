@@ -8,13 +8,14 @@ class CodigoBarraService {
     def serviceMethod() {
 
     }
-    def create(CodigoBarra codigoBarraInstance) throws Exception{
-        if (codigoBarraInstance.save(flush:true)){
+    def create(CodigoBarra codigoInstance) throws Exception{
+
+        if (codigoInstance.save(flush:true)){
             log.info 'Componente:codigoBarra, Metodo: create, completado'
-            return codigoBarraInstance
+            return codigoInstance
         }
         log.error 'Componente:codigoBarra, Metodo:create, error.'
-        throw new Exception()
+        throw new Exception( )
         return null
     }
 
@@ -42,8 +43,11 @@ class CodigoBarraService {
         return CodigoBarra.get(codigoBarraId)
 
     }
-    def findByCodigoBarra(String codigoBarra){
+    def findByCodigo(String codigo){
         log.info 'componente:codigoBarra, Metodo: findByCodigoBarra, completado'
-        return findByCodigoBarra(codigoBarra)
+        return CodigoBarra.findByCodigo(codigo)
+    }
+    List<CodigoBarra> list(){
+        return CodigoBarra.list();
     }
 }

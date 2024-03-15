@@ -6,7 +6,7 @@ class CodigoBarra {
     static belongsTo = [producto:Producto]
 
     static constraints = {
-       // codigo size: 1..20
+        codigo size: 1..20
     }
     static mapping = {
         id generator:'increment'

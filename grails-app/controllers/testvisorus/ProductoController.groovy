@@ -1,6 +1,9 @@
 package testvisorus
 
 import grails.converters.JSON
+import security.Usuario
+import security.UsuarioRol
+import org.springframework.security.crypto.bcrypt.BCrypt
 
 class ProductoController {
     def productoService
@@ -9,25 +12,51 @@ class ProductoController {
     def codigoBarraService
 
     def index() {}
-    def save(){
+    def log(){
         try {
-            if(!params.codigo || !params.descripcion || !params.categoriaId || !params.codigoBarras)
-                throw new Exception('Recuerde que no puede haber campos vacios :(Código, descripción, categoria,Código de Barras)')
+            if(!params.username || !params.password)
+                throw new Exception("El usuario y contraseña son obligatorios")
+            Usuario usuario=Usuario.findByUsername(params.username as String)
+            if(!usuario)
+                throw new Exception("El usuario no existe")
+            //Se utiliza BCrypt para comparar la contraseña cifrada almacenada con la insertada en elm post
+            def passValida=BCrypt.checkpw(params.password,usuario.password)
+            if(!passValida)
+                throw new Exception("La contraseña es incorrecta")
+
+            def usuarioRol=UsuarioRol.findByUser(usuario)
+            def data=[message: 'Existoso',usuarioRol:usuarioRol]
+            return data
+        }
+        catch (ex){
+            def data=[message: "error al loguearse "+ ex.getMessage(),usuarioRol:null]
+            return data
+        }
+
+    }
+    def save(){
+        def datLog=log()
+        try {
+            if (!datLog.usuarioRol)
+            throw new Exception(datLog.message)
+
+            if(datLog.usuarioRol.role.authority!='ROLE_ADMIN')
+                throw new Exception('Usuario de solo lectura')
+
+            if(!params.codigo || !params.descripcion || !params.categoriaId)
+                throw new Exception('Recuerde que no puede haber campos vacios :(Código, descripción, categoria)')
 
             Categoria categoriaInstance= categoriaService.get(params.categoriaId as Long)
             if(!categoriaInstance)
                 throw new Exception('La categoria no existe')
 
-            CodigoBarra codigoBarraInstance= codigoBarraService.get(params.codigoBarraId as Long)
-            if(!codigoBarraInstance)
-                throw new Exception('El código de barras no existe')
-
+            if(categoriaInstance.activo==false)
+                throw new Exception('La categoria seleccionada se encuentra deshabilitada, es necesario habilitar para asignar')
 
             Producto productoInstance=new Producto()
             productoInstance.codigo= params.codigo
             productoInstance.descripcion= params.descripcion
             productoInstance.categoria=categoriaInstance
-            productoInstance.codigoBarra=codigoBarraInstance
             productoInstance.activo=true // se crea con true por defecto
             productoService.create(productoInstance)
 
@@ -41,10 +70,15 @@ class ProductoController {
     }
 
     def update(){
+        def datLog=log()
         try {
-            Categoria categoriaInstance
-            CodigoBarra codigoBarraInstance
+            if (!datLog.usuarioRol)
+                throw new Exception(datLog.message)
 
+            if(datLog.usuarioRol.role.authority!='ROLE_ADMIN')
+                throw new Exception('Usuario de solo lectura')
+
+            Categoria categoriaInstance
             Producto productoInstance=params.id ? productoService.get(params.id as Long) : null
             if(!productoInstance)
                 throw new Exception('El producto que intentas actualizar no existe')
@@ -54,17 +88,10 @@ class ProductoController {
                 if(!categoriaInstance)
                     throw new Exception('La categoria no existe')
             }
-            if(params.codigoBarraId){
-                codigoBarraInstance= codigoBarraService.get(params.codigoBarraId as Long)
-                if(!codigoBarraInstance)
-                    throw new Exception('El código de barras no existe')
-
-            }
 
             productoInstance.codigo=params.codigo ? params.codigo :productoInstance.codigo
             productoInstance.descripcion=params.descripcion ? params.descripcion :productoInstance.descripcion
             productoInstance.categoria=params.categoriaId? categoriaInstance :productoInstance.categoria
-            productoInstance.codigoBarra=params.codigoBarraId? codigoBarraInstance :productoInstance.codigoBarra
             productoInstance.activo=params.activo ? params.activo :productoInstance.activo
             productoService.update(productoInstance)
 
@@ -78,7 +105,14 @@ class ProductoController {
     }
 
     def delete(){
+        def datLog=log()
         try{
+            if (!datLog.usuarioRol)
+                throw new Exception(datLog.message)
+
+            if(datLog.usuarioRol.role.authority!='ROLE_ADMIN')
+                throw new Exception('Usuario de solo lectura')
+
             Producto productoInstance=params.id ? productoService.get(params.id as Long) : null
             if(!productoInstance)
                 throw new Exception('El producto que intentas eliminar no existe')
@@ -94,7 +128,11 @@ class ProductoController {
     }
 
     def get(){
+        def datLog=log()
         try {
+            if (!datLog.usuarioRol)
+                throw new Exception(datLog.message)
+
             Map datosProd
             Producto productoInstance=params.id ? productoService.get(params.id as Long) : null
             if(!productoInstance) {
@@ -102,7 +140,7 @@ class ProductoController {
             }
             else {
                 datosProd=[id:productoInstance.id, codigo:productoInstance.codigo, descripcion:productoInstance.descripcion,
-                          categoria:productoInstance.categoria.descripcion,codigoBarras:productoInstance.codigoBarra.codigo ,
+                          categoria:productoInstance.categoria.descripcion,codigoBarras:productoInstance.codigoBarra,
                            activo:productoInstance.activo
                 ]
             }
@@ -116,12 +154,100 @@ class ProductoController {
 
     }
     def list(){
+        def datLog=log()
         try {
+            if (!datLog.usuarioRol)
+                throw new Exception(datLog.message)
+
             List<Producto> productoList=productoService.list()
             def data=[list:productoList,success: true]
             render data as JSON
         }
         catch (ex){
+            def data = [message: "Ha ocurrido un error" + ex.getMessage(), type: "Error", success: false]
+            render data as JSON
+        }
+    }
+    def findByCodigo(){
+        def datLog=log()
+        try {
+            if (!datLog.usuarioRol)
+                throw new Exception(datLog.message)
+            Map datosProd
+            if (!params.codigo)
+                throw new Exception('El codigo es obligatorio para la busqueda')
+            Producto productoInstance= productoService.findByCodigo(params.codigo)
+            if(productoInstance){
+                datosProd=[id:productoInstance.id, codigo:productoInstance.codigo, descripcion:productoInstance.descripcion,
+                           categoria:productoInstance.categoria.descripcion,codigoBarras:productoInstance.codigoBarra,
+                          activo:productoInstance.activo]
+            }
+            else{
+                throw new Exception('La búsqueda no arrojó ningún resultado')
+            }
+
+            def data =[producto: datosProd, success: true]
+            render data as JSON
+        }
+        catch(ex){
+            def data = [message: "Ha ocurrido un error" + ex.getMessage(), type: "Error", success: false,producto:[]]
+            render data as JSON
+        }
+
+    }
+    def findByDescripcion(){
+        def datLog=log()
+        try {
+            if (!datLog.usuarioRol)
+                throw new Exception(datLog.message)
+            Map datosProd
+            if (!params.descripcion)
+                throw new Exception('La descripción es obligatoria para la busqueda')
+            Producto productoInstance= productoService.findByDescripcion(params.descripcion)
+            if(productoInstance){
+                datosProd=[id:productoInstance.id, codigo:productoInstance.codigo, descripcion:productoInstance.descripcion,
+                          categoria: productoInstance.categoria.descripcion,codigoBarras: productoInstance.codigoBarra,
+                          activo:productoInstance.activo]
+            }
+            else{
+                throw new Exception('La búsqueda no arrojó ningún resultado')
+            }
+
+            def data =[producto:datosProd, success: true]
+            render data as JSON
+        }
+        catch(ex){
+            def data = [message: "Ha ocurrido un error" + ex.getMessage(), type: "Error", success: false,producto:[]]
+            render data as JSON
+        }
+
+    }
+    def findAllByDescripcionLike() {
+        def datLog=log()
+        try {
+            if (!datLog.usuarioRol)
+                throw new Exception(datLog.message)
+
+            def productosList = []
+            if (!params.descripcion)
+                throw new Exception('La descripción es obligatoria para la busqueda')
+
+            def productos = productoService.findAllByDescripcionLike('%'+params.descripcion+'%')
+            productos?.each {
+                productosList << [
+                        id          : it?.id, codigo: it?.codigo, descripcion: it?.descripcion, categoria: it?.categoria.descripcion,
+                        codigoBarras: it?.codigoBarra, activo: it?.activo
+                ]
+            }
+            if (productosList.size() > 0) {
+                def data = [productos: productosList, success: true]
+                render data as JSON
+            } else {
+                throw new Exception('La búsqueda no arrojó ningún resultado')
+            }
+
+        }
+        catch (ex) {
             def data = [message: "Ha ocurrido un error" + ex.getMessage(), type: "Error", success: false]
             render data as JSON
         }
