@@ -4,7 +4,9 @@ import grails.converters.JSON
 import security.Usuario
 import security.UsuarioRol
 import org.springframework.security.crypto.bcrypt.BCrypt
-//@Secured(['ROLE_ADMIN','ROLE_GUEST'])
+import grails.plugin.springsecurity.annotation.Secured
+
+@Secured(['ROLE_ADMIN','ROLE_GUEST'])
 class CodigoBarraController {
     def codigoBarraService
     def productoService
@@ -33,15 +35,9 @@ class CodigoBarraController {
         }
 
     }
-    // @Secured(['ROLE_ADMIN'])   --Lo ideal para control permisos
+     @Secured(['ROLE_ADMIN'])
     def save(){
-        def datLog=log()
         try {
-            if (!datLog.usuarioRol)
-                throw new Exception(datLog.message)
-
-            if(datLog.usuarioRol.role.authority!='ROLE_ADMIN')
-                throw new Exception('Usuario de solo lectura')
 
             if(!params.codigo)
                 throw new Exception('El código es obligatorio')
@@ -67,15 +63,9 @@ class CodigoBarraController {
         }
     }
 
+    @Secured(['ROLE_ADMIN'])
     def update(){
-        def datLog=log()
         try {
-            if (!datLog.usuarioRol)
-             throw new Exception(datLog.message)
-
-            if(datLog.usuarioRol.role.authority!='ROLE_ADMIN')
-             throw new Exception('Usuario de solo lectura')
-
             CodigoBarra codigoBarraInstance=params.id ? codigoBarraService.get(params.id as Long) : null
             if(!codigoBarraInstance)
                 throw new Exception('El cosigo de barras que intentas actualizar no existe')
@@ -92,15 +82,9 @@ class CodigoBarraController {
             render data as JSON
         }
     }
-
+    @Secured(['ROLE_ADMIN'])
     def delete(){
-        def datLog=log()
         try{
-            if (!datLog.usuarioRol)
-                throw new Exception(datLog.message)
-
-            if(datLog.usuarioRol.role.authority!='ROLE_ADMIN')
-                throw new Exception('Usuario de solo lectura')
             CodigoBarra codigoBarraInstance=params.id ? codigoBarraService.get(params.id as Long) : null
             if(!codigoBarraInstance)
                 throw new Exception('El código que intentas eliminar no existe')
@@ -114,13 +98,10 @@ class CodigoBarraController {
             render data as JSON
         }
     }
-// @Secured(['ROLE_ADMIN','ROLE_GUEST'])  ---Lo ideal para control de permisos
+ @Secured(['ROLE_ADMIN','ROLE_GUEST'])
     def get(){
-        def datLog=log()
-        try {
-            if (!datLog.usuarioRol)
-                throw new Exception(datLog.message)
 
+        try {
             Map datosCb
             CodigoBarra codigoBarraInstance=params.id ? codigoBarraService.get(params.id as Long) : null
             if(!codigoBarraInstance) {
@@ -139,12 +120,9 @@ class CodigoBarraController {
         }
 
     }
+    @Secured(['ROLE_ADMIN','ROLE_GUEST'])
     def list(){
-        def datLog=log()
         try {
-            if (!datLog.usuarioRol)
-                throw new Exception(datLog.message)
-
             List<CodigoBarra> codigoBarraList=codigoBarraService.list()
             def data=[list:codigoBarraList,success: true]
             render data as JSON
@@ -154,12 +132,9 @@ class CodigoBarraController {
             render data as JSON
         }
     }
+    @Secured(['ROLE_ADMIN','ROLE_GUEST'])
     def findByCodigo(){
-        def datLog=log()
         try {
-            if (!datLog.usuarioRol)
-                throw new Exception(datLog.message)
-
             Map datosProd
             if (!params.codigo)
                 throw new Exception('El codigo es obligatorio para la busqueda')

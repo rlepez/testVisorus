@@ -5,7 +5,9 @@ import grails.transaction.Transactional
 import security.Usuario
 import security.UsuarioRol
 import org.springframework.security.crypto.bcrypt.BCrypt
+import grails.plugin.springsecurity.annotation.Secured
 
+@Secured(['ROLE_ADMIN','ROLE_GUEST'])
 class CategoriaController {
     def categoriaService
 
@@ -36,15 +38,9 @@ class CategoriaController {
     }
 
     //Se crea una nueva categoria
+    @Secured(['ROLE_ADMIN'])
     def save(){
-        def datLog=log() //check usuario y contraseña
         try {
-            if (!datLog.usuarioRol) // si el usuarioRol es nulo regresa error
-                throw new Exception(datLog.message)
-
-            if(datLog.usuarioRol.role.authority!='ROLE_ADMIN') //Si el rol es diferente a Admin no permite guardar
-                throw new Exception('Usuario de solo lectura')
-
             if(!params.codigo || !params.descripcion)
                 throw new Exception('El código y la descripción son datos obligatorios')
 
@@ -63,15 +59,9 @@ class CategoriaController {
         }
     }
 
+    @Secured(['ROLE_ADMIN'])
     def update(){
-        def datLog=log() //check usuario y contraseña
         try {
-            if (!datLog.usuarioRol) //Si el usuarioRol es nulo regresa error
-                throw new Exception(datLog.message)
-
-            if(datLog.usuarioRol.role.authority!='ROLE_ADMIN')//Si es usuario invitado no puede actualizar
-                throw new Exception('Usuario de solo lectura')
-
             Categoria categoriaInstance=params.id ? categoriaService.get(params.id as Long) : null
             if(!categoriaInstance)
                 throw new Exception('La categoria que intentas actualizr no existe')
@@ -90,15 +80,9 @@ class CategoriaController {
         }
     }
 
+    @Secured(['ROLE_ADMIN'])
     def delete(){
-        def datLog=log()
         try{
-            if (!datLog.usuarioRol)
-                throw new Exception(datLog.message)
-
-            if(datLog.usuarioRol.role.authority!='ROLE_ADMIN')
-                throw new Exception('Usuario de solo lectura')
-
             Categoria categoriaInstance=params.id ? categoriaService.get(params.id as Long) : null
             if(!categoriaInstance)
                 throw new Exception('La categoria que intentas eliminar no existe')
@@ -113,12 +97,9 @@ class CategoriaController {
         }
     }
 
+    @Secured(['ROLE_ADMIN','ROLE_GUEST'])
     def get(){
-        def datLog=log()
         try {
-            if (!datLog.usuarioRol)
-                throw new Exception(datLog.message)
-
             Map datosCat
             Categoria categoriaInstance=params.id ? categoriaService.get(params.id as Long) : null
             if(!categoriaInstance) {
@@ -138,12 +119,9 @@ class CategoriaController {
         }
 
     }
+    @Secured(['ROLE_ADMIN','ROLE_GUEST'])
     def list(){
-        def datLog=log()
         try {
-            if (!datLog.usuarioRol)
-                throw new Exception(datLog.message)
-
             List<Categoria> categoriaList=categoriaService.list()
             def data=[list:categoriaList,success: true]
             render data as JSON
@@ -154,13 +132,9 @@ class CategoriaController {
         }
     }
 
+    @Secured(['ROLE_ADMIN','ROLE_GUEST'])
     def findByCodigo(){
-        def datLog=log()
-
         try {
-            if (!datLog.usuarioRol)
-                throw new Exception(datLog.message)
-
             Map datosCat
             if (!params.codigo)
                 throw new Exception('El codigo es obligatorio para la busqueda')
@@ -182,12 +156,11 @@ class CategoriaController {
         }
 
     }
-    def findByDescripcion(){
-        def datLog=log()
-        try {
-            if (!datLog.usuarioRol)
-                throw new Exception(datLog.message)
 
+    @Secured(['ROLE_ADMIN','ROLE_GUEST'])
+    def findByDescripcion(){
+
+        try {
             Map datosCat
             if (!params.descripcion)
                 throw new Exception('La descripción es obligatoria para la busqueda')
@@ -209,12 +182,11 @@ class CategoriaController {
         }
 
     }
-    def findAllByDescripcionLike(){
-        def datLog=log()
-        try {
-            if (!datLog.usuarioRol)
-                throw new Exception(datLog.message)
 
+    @Secured(['ROLE_ADMIN','ROLE_GUEST'])
+    def findAllByDescripcionLike(){
+
+        try {
             def categoriasList=[]
             if (!params.descripcion)
                 throw new Exception('La descripción es obligatoria para la busqueda')

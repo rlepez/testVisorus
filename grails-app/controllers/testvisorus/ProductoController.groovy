@@ -4,6 +4,8 @@ import grails.converters.JSON
 import security.Usuario
 import security.UsuarioRol
 import org.springframework.security.crypto.bcrypt.BCrypt
+import grails.plugin.springsecurity.annotation.Secured
+@Secured(['ROLE_ADMIN','ROLE_GUEST'])
 
 class ProductoController {
     def productoService
@@ -34,15 +36,10 @@ class ProductoController {
         }
 
     }
+
+    @Secured(['ROLE_ADMIN'])
     def save(){
-        def datLog=log()
         try {
-            if (!datLog.usuarioRol)
-            throw new Exception(datLog.message)
-
-            if(datLog.usuarioRol.role.authority!='ROLE_ADMIN')
-                throw new Exception('Usuario de solo lectura')
-
             if(!params.codigo || !params.descripcion || !params.categoriaId)
                 throw new Exception('Recuerde que no puede haber campos vacios :(Código, descripción, categoria)')
 
@@ -69,15 +66,10 @@ class ProductoController {
         }
     }
 
+    @Secured(['ROLE_ADMIN'])
     def update(){
-        def datLog=log()
+
         try {
-            if (!datLog.usuarioRol)
-                throw new Exception(datLog.message)
-
-            if(datLog.usuarioRol.role.authority!='ROLE_ADMIN')
-                throw new Exception('Usuario de solo lectura')
-
             Categoria categoriaInstance
             Producto productoInstance=params.id ? productoService.get(params.id as Long) : null
             if(!productoInstance)
@@ -104,15 +96,10 @@ class ProductoController {
         }
     }
 
+    @Secured(['ROLE_ADMIN'])
     def delete(){
-        def datLog=log()
+
         try{
-            if (!datLog.usuarioRol)
-                throw new Exception(datLog.message)
-
-            if(datLog.usuarioRol.role.authority!='ROLE_ADMIN')
-                throw new Exception('Usuario de solo lectura')
-
             Producto productoInstance=params.id ? productoService.get(params.id as Long) : null
             if(!productoInstance)
                 throw new Exception('El producto que intentas eliminar no existe')
@@ -127,38 +114,33 @@ class ProductoController {
         }
     }
 
-    def get(){
-        def datLog=log()
+    @Secured(['ROLE_ADMIN','ROLE_GUEST'])
+    def get() {
         try {
-            if (!datLog.usuarioRol)
-                throw new Exception(datLog.message)
-
             Map datosProd
-            Producto productoInstance=params.id ? productoService.get(params.id as Long) : null
-            if(!productoInstance) {
+            Producto productoInstance = params.id ? productoService.get(params.id as Long) : null
+            if (!productoInstance) {
                 throw new Exception('El producto no existe')
-            }
-            else {
-                datosProd=[id:productoInstance.id, codigo:productoInstance.codigo, descripcion:productoInstance.descripcion,
-                          categoria:productoInstance.categoria.descripcion,codigoBarras:productoInstance.codigoBarra,
-                           activo:productoInstance.activo
+            } else {
+                datosProd = [id       : productoInstance.id, codigo: productoInstance.codigo, descripcion: productoInstance.descripcion,
+                             categoria: productoInstance.categoria.descripcion, codigoBarras: productoInstance.codigoBarra,
+                             activo   : productoInstance.activo
                 ]
             }
-            def data =[producto:datosProd, success: true]
+            def data = [producto: datosProd, success: true]
             render data as JSON
         }
-        catch(ex){
-            def data = [message: "Ha ocurrido un error" + ex.getMessage(), type: "Error", success: false,producto:[]]
+        catch (ex) {
+            def data = [message: "Ha ocurrido un error" + ex.getMessage(), type: "Error", success: false, producto: []]
             render data as JSON
         }
 
     }
-    def list(){
-        def datLog=log()
-        try {
-            if (!datLog.usuarioRol)
-                throw new Exception(datLog.message)
 
+    @Secured(['ROLE_ADMIN','ROLE_GUEST'])
+    def list(){
+
+        try {
             List<Producto> productoList=productoService.list()
             def data=[list:productoList,success: true]
             render data as JSON
@@ -168,11 +150,10 @@ class ProductoController {
             render data as JSON
         }
     }
+
+    @Secured(['ROLE_ADMIN','ROLE_GUEST'])
     def findByCodigo(){
-        def datLog=log()
         try {
-            if (!datLog.usuarioRol)
-                throw new Exception(datLog.message)
             Map datosProd
             if (!params.codigo)
                 throw new Exception('El codigo es obligatorio para la busqueda')
@@ -195,11 +176,9 @@ class ProductoController {
         }
 
     }
+    @Secured(['ROLE_ADMIN','ROLE_GUEST'])
     def findByDescripcion(){
-        def datLog=log()
         try {
-            if (!datLog.usuarioRol)
-                throw new Exception(datLog.message)
             Map datosProd
             if (!params.descripcion)
                 throw new Exception('La descripción es obligatoria para la busqueda')
@@ -222,12 +201,10 @@ class ProductoController {
         }
 
     }
-    def findAllByDescripcionLike() {
-        def datLog=log()
-        try {
-            if (!datLog.usuarioRol)
-                throw new Exception(datLog.message)
 
+    @Secured(['ROLE_ADMIN','ROLE_GUEST'])
+    def findAllByDescripcionLike() {
+        try {
             def productosList = []
             if (!params.descripcion)
                 throw new Exception('La descripción es obligatoria para la busqueda')
